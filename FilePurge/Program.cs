@@ -41,7 +41,6 @@ File Purge Utility
             if (args.Length > 1)
             {
                 string baseDir = args[0];
-
                 string arguments = String.Join(" ", args.Skip(1));
                 if (Directory.Exists(baseDir))
                 {
