@@ -8,11 +8,16 @@ namespace FilePurge
 {
     internal class Program
     {
+        static string cli_base { get; set; }
+        static string cli_args { get; set; }
+        static bool cli_mode { get; set; } = false;
         static void Main(string[] args)
         {
             Console.WriteLine(@"
 File Purge Utility
 ");
+            CheckCLI(args);
+
             while (true)
             {
                 string baseDir = GetBaseDirectory();
@@ -24,13 +29,32 @@ File Purge Utility
                         SearchAndDeleteFiles(baseDir, appArgs);
                     }
                 }
+                if (cli_mode)
+                {
+                    Environment.Exit(0);
+                }
             }
         }
 
+        static void CheckCLI(string[] args)
+        {
+            if (args.Length > 1)
+            {
+                string baseDir = args[0];
+
+                string arguments = String.Join(" ", args.Skip(1));
+                if (Directory.Exists(baseDir))
+                {
+                    cli_base = baseDir;
+                    cli_args = arguments;
+                    cli_mode = true;
+                }
+            }
+        }
         static string GetBaseDirectory()
         {
             Console.WriteLine("Set search base directory:");
-            string baseDir = Console.ReadLine();
+            string baseDir = cli_mode ? cli_base : Console.ReadLine();
             if (string.IsNullOrEmpty(baseDir))
             {
                 Console.WriteLine("Base directory cannot be empty.");
@@ -65,7 +89,7 @@ Examples:
 ");
             int restartcount = 0;
         restart:
-            string[] arguments = Console.ReadLine().Split(' ');
+            string[] arguments = cli_mode ? cli_args.Split(' ') : Console.ReadLine().Split(' ');
             AppArgs appArgs = new AppArgs(arguments);
             if (!appArgs.IsValid)
             {
@@ -92,7 +116,7 @@ Examples:
             if (files.Count > 0)
             {
                 Console.WriteLine("Proceed with delete? [y/n]");
-                string proceed = Console.ReadLine();
+                string proceed = cli_mode ? "y" : Console.ReadLine();
                 if (proceed.ToLower() == "y")
                 {
                     DeleteFiles(files);
@@ -102,17 +126,31 @@ All done!
 
 Hit q to quit or any other key to restart...
 ");
-                    if (Console.ReadKey().Key == ConsoleKey.Q)
+                    if (cli_mode)
                     {
                         Environment.Exit(0);
                     }
-                    Console.Clear();
+                    else if (Console.ReadKey().Key == ConsoleKey.Q)
+                    {
+                        Environment.Exit(0);
+                    }
+                    else
+                    {
+                        Console.Clear();
+                    }
                 }
             }
             else
             {
-                Console.WriteLine("Hit any key to restart...");
-                Console.ReadKey();
+                if (cli_mode)
+                {
+                    Environment.Exit(0);
+                }
+                else
+                {
+                    Console.WriteLine("Hit any key to restart...");
+                    Console.ReadKey();
+                }
             }
         }
 
