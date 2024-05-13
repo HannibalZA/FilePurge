@@ -1,6 +1,6 @@
 # File Purge Utility
 
-Nice little utility for handling recursive batch file deletes
+Nice little utility for handling recursive batched file deletes
 
 Honorable mentions to this dude for the Wildcard string matching function, saved some time.
 Thanks, nerd ;)
