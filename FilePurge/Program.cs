@@ -172,7 +172,7 @@ Delete png files in a directories ending in 'to delete', skip files ending in 'k
                 {
                     try
                     {
-                        return Regex.IsMatch(subject, regexPattern);
+                        return Regex.IsMatch(subject, regexPattern, RegexOptions.IgnoreCase);
                     }
                     catch
                     {
@@ -184,7 +184,7 @@ Delete png files in a directories ending in 'to delete', skip files ending in 'k
             {
                 try
                 {
-                    return Regex.IsMatch(subject, regexPattern);
+                    return Regex.IsMatch(subject, regexPattern, RegexOptions.IgnoreCase);
                 }
                 catch
                 {
