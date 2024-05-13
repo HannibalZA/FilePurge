@@ -8,127 +8,158 @@ namespace FilePurge
 {
     internal class Program
     {
-        public static List<string> files = new List<string>();
         static void Main(string[] args)
         {
-        start:
-            string base_dir = "";
             Console.WriteLine(@"
-File Purge utility
+File Purge Utility
 ");
-            Console.WriteLine("Set search base directory:");
-            base_dir = Console.ReadLine();
-            if (base_dir != "")
+            while (true)
             {
-                if (!Directory.Exists(base_dir))
+                string baseDir = GetBaseDirectory();
+                if (!string.IsNullOrEmpty(baseDir))
                 {
-                    Console.WriteLine("Directory does not exist. Try again...");
-                    goto start;
-                }
-            }
-
-            Console.WriteLine($@"Base directory set as: {base_dir}.");
-            Console.WriteLine(@"Purge command options:
-filematch [foldermatch] [ignorematch] [olderThan] [newerThan]
-examples:
-
-Just delete all png files
-*.png
-
- Delete all png files in directories ending in 'to delete'
-*.png *to delete
-
-Delete png files in a directories ending in 'to delete', skip files ending in 'keep.png' and delete files older than 2024-01-01 and newer than 2023-12-01
-*.png *to delete *keep.png 2024-01-01 2023-12-01
-");
-
-        restart:
-            Console.WriteLine("proceed...");
-            string[] arguments = Console.ReadLine().Split(' ');
-            AppArgs appargs = new AppArgs(arguments);
-            if (!appargs.valid)
-            {
-                Console.Clear();
-                Console.WriteLine(@"Purge command options:
-filematch [foldermatch] [ignorematch] [olderThan] [newerThan]
-examples:
-
-Just delete all png files
-*.png
-
- Delete all png files in directories ending in 'to delete'
-*.png *to delete
-
-Delete png files in a directories ending in 'to delete', skip files ending in 'keep.png' and delete files older than 2024-01-01 and newer than 2023-12-01
-*.png *to delete *keep.png 2024-01-01 2023-12-01
-");
-                goto restart;
-            }
-            else
-            {
-                files.Clear();
-                Console.WriteLine("Searching...");
-                SearchAccessibleFiles(base_dir, appargs.fileMatch, appargs.folderMatch, appargs.ignoreMatch, appargs.olderThan, appargs.newerThan);
-
-                Console.WriteLine("Done searching.");
-
-                if (files.Count < 100)
-                {
-                    foreach (string file in files)
+                    AppArgs appArgs = GetArguments();
+                    if (appArgs != null)
                     {
-                        Console.WriteLine($"{file}");
+                        SearchAndDeleteFiles(baseDir, appArgs);
                     }
                 }
+            }
+        }
 
-                Console.WriteLine(files.Count + " files found...");
+        static string GetBaseDirectory()
+        {
+            Console.WriteLine("Set search base directory:");
+            string baseDir = Console.ReadLine();
+            if (string.IsNullOrEmpty(baseDir))
+            {
+                Console.WriteLine("Base directory cannot be empty.");
+                return null;
+            }
+            if (!Directory.Exists(baseDir))
+            {
+                Console.WriteLine("Directory does not exist.");
+                return null;
+            }
+            Console.WriteLine($@"Base directory set as: {baseDir}.");
+            return baseDir;
+        }
+
+        static AppArgs GetArguments()
+        {
+            Console.WriteLine("Enter purge command:");
+            Console.WriteLine(@"
+Purge command options:
+filematch [foldermatch] [ignorematch] [olderThan] [newerThan]
+
+Examples:
+
+    Just delete all png files
+    *.png
+
+    Delete all png files in directories ending in 'to delete'
+    *.png *to delete
+
+    Delete png files in a directories ending in 'to delete', skip files ending in 'keep.png' and delete files older than 2024-01-01 and newer than 2023-12-01
+    *.png *to delete *keep.png 2024-01-01 2023-12-01
+");
+            int restartcount = 0;
+        restart:
+            string[] arguments = Console.ReadLine().Split(' ');
+            AppArgs appArgs = new AppArgs(arguments);
+            if (!appArgs.IsValid)
+            {
+                Console.WriteLine("Invalid purge command. Please try again.");
+                restartcount++;
+                if (restartcount == 3) { return null; }
+                goto restart;
+            }
+            return appArgs;
+        }
+
+        static void SearchAndDeleteFiles(string baseDir, AppArgs appArgs)
+        {
+            List<string> files = new List<string>();
+            SearchAccessibleFiles(baseDir, appArgs, files);
+            if (files.Count > 0 && files.Count < 100)
+            {
+                foreach (string file in files)
+                {
+                    Console.WriteLine($"{file}");
+                }
+            }
+            Console.WriteLine($"{files.Count} files found...");
+            if (files.Count > 0)
+            {
                 Console.WriteLine("Proceed with delete? [y/n]");
                 string proceed = Console.ReadLine();
                 if (proceed.ToLower() == "y")
                 {
-                    Console.WriteLine("Deleting!");
-                    foreach (string file in files)
+                    DeleteFiles(files);
+
+                    Console.WriteLine(@"
+All done! 
+
+Hit q to quit or any other key to restart...
+");
+                    if (Console.ReadKey().Key == ConsoleKey.Q)
                     {
-                        Console.WriteLine($"{Path.GetFileName(file)} deleted");
-                        File.Delete(file);
+                        Environment.Exit(0);
                     }
-                }
-                else
-                {
-                    goto restart;
+                    Console.Clear();
                 }
             }
-            Console.WriteLine("All done. Hit any key to exit...");
-            Console.ReadLine();
+            else
+            {
+                Console.WriteLine("Hit any key to restart...");
+                Console.ReadKey();
+            }
         }
-        static void SearchAccessibleFiles(string root, string fileMatch, string folderMatch, string ignoreMatch, DateTime olderThan, DateTime newerThan)
+
+        static void SearchAccessibleFiles(string root, AppArgs appArgs, List<string> files)
         {
-            Console.WriteLine("Searching " + root);
-            foreach (var file in Directory.EnumerateFiles(root).Where(m => MatchByFilename(m, fileMatch) && !MatchByFilename(m, ignoreMatch)))
+            foreach (var file in Directory.EnumerateFiles(root).Where(m => MatchByFilename(m, appArgs.FileMatch) && !MatchByFilename(m, appArgs.IgnoreMatch)))
             {
                 FileInfo fileInfo = new FileInfo(file);
-
-                if (fileInfo.LastWriteTime > newerThan && fileInfo.LastWriteTime < olderThan)
+                if (fileInfo.LastWriteTime > appArgs.NewerThan && fileInfo.LastWriteTime < appArgs.OlderThan)
                 {
                     files.Add(file);
                 }
             }
-            foreach (var subDir in Directory.EnumerateDirectories(root).Where(d => MatchByFoldername(d, folderMatch)))
+            foreach (var subDir in Directory.EnumerateDirectories(root).Where(d => MatchByFoldername(d, appArgs.FolderMatch)))
             {
                 try
                 {
-                    SearchAccessibleFiles(subDir, fileMatch, folderMatch, ignoreMatch, olderThan, newerThan);
+                    SearchAccessibleFiles(subDir, appArgs, files);
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    // ... do what you like or just catch it...
                     Console.WriteLine(ex.Message);
                 }
             }
         }
+
+        static void DeleteFiles(List<string> files)
+        {
+            foreach (string file in files)
+            {
+                try
+                {
+                    File.Delete(file);
+                    Console.WriteLine($"{Path.GetFileName(file)} deleted");
+                }
+                catch
+                {
+                    Console.WriteLine($"Unable to delete {file}");
+                }
+            }
+        }
+
         static bool MatchByFilename(string filepath, string fileMatch)
         {
             return Matches(Path.GetFileName(filepath), fileMatch);
         }
+
         static bool MatchByFoldername(string folderpath, string folderMatch)
         {
             return Matches(new DirectoryInfo(folderpath).Name, folderMatch);
@@ -144,8 +175,9 @@ Delete png files in a directories ending in 'to delete', skip files ending in 'k
                 return true;
             }
 
-            if (wildcardPattern == "!") { //for negative matching requirement e.g. ignoreMatch empty, so don't match anything...
-                return false; 
+            if (wildcardPattern == "!")
+            { //for negative matching requirement e.g. ignoreMatch empty, so don't match anything...
+                return false;
             }
 
             string regexPattern = string.Concat("^", Regex.Escape(wildcardPattern).Replace("\\*", ".*"), "$");
@@ -195,59 +227,61 @@ Delete png files in a directories ending in 'to delete', skip files ending in 'k
     }
     public class AppArgs
     {
-        public string fileMatch { get; set; } = "";
-        public string folderMatch { get; set; } = "";
-        public string ignoreMatch { get; set; } = "!";
-        public DateTime olderThan { get; set; } = DateTime.Now;
-        public DateTime newerThan { get; set; } = DateTime.MinValue;
+        public string FileMatch { get; set; } = "";
+        public string FolderMatch { get; set; } = "";
+        public string IgnoreMatch { get; set; } = "!";
+        public DateTime OlderThan { get; set; } = DateTime.Now;
+        public DateTime NewerThan { get; set; } = DateTime.MinValue;
 
-        public bool valid = false;
+        public bool IsValid = false;
 
         public AppArgs(string[] args)
         {
             //Args filematch [foldermatch] [ignorematch] [olderThan] [newerThan]
             int len = args.Length;
+
             switch (len)
             {
-                case 0:
-                    valid = false;
-                    break;
                 case 1:
-                    valid = true;
-                    fileMatch = args[0];
+                    IsValid = true;
+                    FileMatch = args[0];
                     break;
                 case 2:
-                    valid = true;
-                    fileMatch = args[0];
-                    folderMatch = args[1];
+                    IsValid = true;
+                    FileMatch = args[0];
+                    FolderMatch = args[1];
                     break;
                 case 3:
-                    valid = true;
-                    fileMatch = args[0];
-                    folderMatch = args[1];
-                    ignoreMatch = args[2];
+                    IsValid = true;
+                    FileMatch = args[0];
+                    FolderMatch = args[1];
+                    IgnoreMatch = args[2];
                     break;
                 case 4:
-                    valid = true;
-                    fileMatch = args[0];
-                    folderMatch = args[1];
-                    ignoreMatch = args[2];
-                    olderThan = args[3].ToDate();
+                    IsValid = true;
+                    FileMatch = args[0];
+                    FolderMatch = args[1];
+                    IgnoreMatch = args[2];
+                    OlderThan = args[3].ToDate();
                     break;
                 case 5:
-                    valid = true;
-                    fileMatch = args[0];
-                    folderMatch = args[1];
-                    ignoreMatch = args[2];
-                    olderThan = args[3].ToDate();
-                    newerThan = args[4].ToDate();
-                    if (newerThan > olderThan)
+                    IsValid = true;
+                    FileMatch = args[0];
+                    FolderMatch = args[1];
+                    IgnoreMatch = args[2];
+                    OlderThan = args[3].ToDate();
+                    NewerThan = args[4].ToDate();
+                    if (NewerThan > OlderThan)
                     {
-                        newerThan = olderThan;
-                        olderThan = args[4].ToDate();
+                        NewerThan = OlderThan;
+                        OlderThan = args[4].ToDate();
                     }
                     break;
+                default:
+                    IsValid = false;
+                    break;
             }
+            if (FileMatch == "") { IsValid = false; } //Let's not be silly...
         }
     }
     public static class Extensions
