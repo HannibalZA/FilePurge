@@ -76,16 +76,18 @@ File Purge Utility
 Purge command options:
 filematch [foldermatch] [ignorematch] [olderThan] [newerThan]
 
+Individual parameters cannot have spaces!
+
 Examples:
 
     Just delete all png files
     *.png
 
-    Delete all png files in directories ending in 'to delete'
-    *.png *to delete
+    Delete all png files in directories ending in 'to_delete'
+    *.png *to_delete
 
-    Delete png files in a directories ending in 'to delete', skip files ending in 'keep.png' and delete files older than 2024-01-01 and newer than 2023-12-01
-    *.png *to delete *keep.png 2024-01-01 2023-12-01
+    Delete png files in a directories ending in 'to_delete', skip files ending in 'keep.png' and delete files older than 2024-01-01 and newer than 2023-12-01
+    *.png *to_delete *keep.png 2024-01-01 2023-12-01
 ");
             int restartcount = 0;
         restart:
