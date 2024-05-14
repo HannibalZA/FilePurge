@@ -157,6 +157,10 @@ Hit q to quit or any other key to restart...
 
         static void SearchAccessibleFiles(string root, AppArgs appArgs, List<string> files)
         {
+            //Thanks
+            //https://gist.github.com/smith-neil/9403767
+            //Very handy indeed
+
             foreach (var file in Directory.EnumerateFiles(root).Where(m => MatchByFilename(m, appArgs.FileMatch) && !MatchByFilename(m, appArgs.IgnoreMatch)))
             {
                 FileInfo fileInfo = new FileInfo(file);
