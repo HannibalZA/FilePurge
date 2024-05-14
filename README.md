@@ -38,3 +38,5 @@ Thanks, nerd ;)
 
 https://www.hiimray.co.uk/2020/04/18/implementing-simple-wildcard-string-matching-using-regular-expressions/474
 
+Nifty file and directory enumeration derived with thanks from
+https://gist.github.com/smith-neil/9403767
